@@ -27,7 +27,7 @@
 </head>
 <body class="bg-slate-950 text-white min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8 select-none">
 
-    <!-- ================= CONTROL PANEL (Your Laptop / Admin View) ================= -->
+    <!-- ================= CONTROL PANEL ================= -->
     <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 backdrop-blur">
         <div>
             <div class="flex items-center justify-between">
@@ -40,7 +40,7 @@
 
         <!-- Update Poll Form -->
         <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
-            <h2 class="font-bold text-xs uppercase text-indigo-300 tracking-wider">📊 Change Live Poll</h2>
+            <h2 class="font-bold text-xs uppercase text-indigo-300 tracking-wider">📊 Change Live Poll (10s Duration)</h2>
             <input type="text" id="input-q" placeholder="Ask a wild question..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
             <div class="grid grid-cols-2 gap-2">
                 <input type="text" id="input-a" placeholder="Option A" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
@@ -51,13 +51,13 @@
 
         <!-- Push Message Form -->
         <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
-            <h2 class="font-bold text-xs uppercase text-emerald-300 tracking-wider">💬 Push Joke / Hot Take</h2>
+            <h2 class="font-bold text-xs uppercase text-emerald-300 tracking-wider">💬 Push Joke / Hot Take (20s Duration)</h2>
             <input type="text" id="input-name" placeholder="Your Name / Anonymous" value="Anonymous" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
             <textarea id="input-msg" placeholder="Type something funny..." rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"></textarea>
             <button onclick="pushMessage()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">Show on Stream ✨</button>
         </div>
 
-        <!-- Viewer Simulation (For Testing) -->
+        <!-- Viewer Simulation -->
         <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-2">
             <h2 class="font-bold text-xs uppercase text-pink-300 tracking-wider">⚡ Test Interactions</h2>
             <div class="grid grid-cols-2 gap-2">
@@ -68,13 +68,11 @@
     </div>
 
 
-    <!-- ================= OBS CAPTURE SCREEN (9:16 Vertical for YouTube Shorts) ================= -->
+    <!-- ================= OBS CAPTURE SCREEN ================= -->
     <div id="obs-screen" class="w-[400px] h-[711px] bg-slate-900 border-4 border-slate-800 rounded-[36px] p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden broadcast-glow">
         
-        <!-- Floating Reaction Container -->
         <div id="floating-reactions" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
 
-        <!-- Top Header Status -->
         <div class="flex justify-between items-center z-10">
             <div class="flex items-center space-x-2 bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-full">
                 <span class="flex h-2 w-2 relative">
@@ -86,17 +84,15 @@
             <div id="online-badge" class="text-[10px] font-mono text-slate-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded-full">🔥 100% LIVE</div>
         </div>
 
-        <!-- Center Visual Stack -->
         <div class="my-auto space-y-5 z-10 w-full">
             
-            <!-- Live Interactive Poll Card -->
-            <div class="bg-slate-950/85 border border-slate-800/80 p-5 rounded-3xl backdrop-blur-md space-y-4 shadow-xl">
+            <!-- Live Interactive Poll Card (Hidden until generated) -->
+            <div id="poll-card" class="bg-slate-950/85 border border-slate-800/80 p-5 rounded-3xl backdrop-blur-md space-y-4 shadow-xl" style="display: none;">
                 <div class="text-center space-y-1">
                     <span class="text-[9px] uppercase font-black tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">Live Community Poll</span>
-                    <h2 id="display-q" class="text-xl font-black leading-snug pt-1 text-slate-100">Loading Question...</h2>
+                    <h2 id="display-q" class="text-xl font-black leading-snug pt-1 text-slate-100"></h2>
                 </div>
 
-                <!-- Option A -->
                 <div class="space-y-1">
                     <div class="flex justify-between font-bold text-xs">
                         <span id="display-a-text" class="text-indigo-300">Option A</span>
@@ -107,7 +103,6 @@
                     </div>
                 </div>
 
-                <!-- Option B -->
                 <div class="space-y-1">
                     <div class="flex justify-between font-bold text-xs">
                         <span id="display-b-text" class="text-pink-300">Option B</span>
@@ -119,18 +114,17 @@
                 </div>
             </div>
 
-            <!-- Live Message Ticker Card -->
-            <div id="msg-card" class="bg-slate-950/85 border border-slate-800/80 p-4 rounded-3xl backdrop-blur-md space-y-1.5 shadow-xl animate-slide">
+            <!-- Live Message Ticker Card (Hidden until a message is sent) -->
+            <div id="msg-card" class="bg-slate-950/85 border border-slate-800/80 p-4 rounded-3xl backdrop-blur-md space-y-1.5 shadow-xl animate-slide" style="display: none;">
                 <div class="flex items-center justify-between">
                     <span id="display-author" class="text-emerald-400 font-bold text-[10px] uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full">👤 System</span>
                     <span class="text-[9px] text-slate-500 font-mono">Just Now</span>
                 </div>
-                <p id="display-text" class="text-base font-bold text-slate-100 tracking-tight leading-snug">"Type your joke or vote to see it pop up live!"</p>
+                <p id="display-text" class="text-base font-bold text-slate-100 tracking-tight leading-snug"></p>
             </div>
 
         </div>
 
-        <!-- Bottom Footer Callout & Reaction Triggers -->
         <div class="space-y-2 z-10">
             <div class="grid grid-cols-3 gap-2">
                 <button onclick="triggerReaction('🔥')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">🔥 Fire</button>
@@ -140,7 +134,7 @@
 
             <div class="text-center bg-gradient-to-t from-slate-950 pt-2">
                 <p class="text-[10px] font-medium text-slate-400">Join the live conversation</p>
-                <div class="mt-1 bg-white text-slate-950 font-black text-xs py-1.5 rounded-xl tracking-wider shadow-lg">YOURWEBSITE.COM</div>
+                <div class="mt-1 bg-white text-slate-950 font-black text-[10px] py-1.5 px-2 rounded-xl tracking-wider shadow-lg truncate">https://kunalqbit.github.io/live-stream/</div>
             </div>
         </div>
     </div>
@@ -151,7 +145,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, update, push, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Your Firebase configuration from your console screenshot[cite: 9]
         const firebaseConfig = {
             apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9Ut79Hb1RhmAA",
             authDomain: "yt-live-stream-4e4ea.firebaseapp.com",
@@ -165,22 +158,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 1. Sync Poll Data Globally
+        // 1. Sync Poll Data Globally (10s Visibility)
         const pollRef = ref(db, 'activePoll');
+        let pollTimer = null;
+
         onValue(pollRef, (snapshot) => {
             const data = snapshot.val();
-            if (data) {
-                renderPoll(data);
-            } else {
-                // Initialize default poll if database is empty
-                set(pollRef, {
-                    question: "Should Monday be banned globally?",
-                    optA: "YES",
-                    optB: "NO",
-                    votesA: 24,
-                    votesB: 16
-                });
-            }
+            renderPoll(data);
         });
 
         window.updatePoll = function() {
@@ -188,12 +172,15 @@
             const a = document.getElementById('input-a').value.trim();
             const b = document.getElementById('input-b').value.trim();
 
-            update(pollRef, {
-                question: q || "Should Monday be banned globally?",
+            if(!q) return;
+
+            set(pollRef, {
+                question: q,
                 optA: a || "YES",
                 optB: b || "NO",
-                votesA: 1,
-                votesB: 1
+                votesA: 0,
+                votesB: 0,
+                createdAt: Date.now()
             });
 
             document.getElementById('input-q').value = '';
@@ -206,46 +193,22 @@
             runTransaction(ref(db, `activePoll/${field}`), (current) => (current || 0) + 1);
         }
 
-        // 2. Sync Messages Globally
-        window.pushMessage = function() {
-            const name = document.getElementById('input-name').value.trim() || "Anonymous";
-            const text = document.getElementById('input-msg').value.trim();
-            if(!text) return;
-
-            push(ref(db, 'messages'), { name, text, time: Date.now() });
-            document.getElementById('input-msg').value = '';
-        }
-
-        const msgRef = ref(db, 'messages');
-        onValue(msgRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const keys = Object.keys(data);
-                const latestMsg = data[keys[keys.length - 1]];
-                renderMessage(latestMsg);
-            }
-        });
-
-        // 3. Sync Reactions Globally
-        window.triggerReaction = function(emoji) {
-            push(ref(db, 'reactions'), { emoji, time: Date.now() });
-        }
-
-        const reactRef = ref(db, 'reactions');
-        onValue(reactRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const keys = Object.keys(data);
-                const latestReact = data[keys[keys.length - 1]];
-                // Only spawn if recent (prevent spam on load)
-                if (Date.now() - latestReact.time < 3000) {
-                    spawnEmoji(latestReact.emoji);
-                }
-            }
-        });
-
-        // Render Functions
         function renderPoll(data) {
+            const card = document.getElementById('poll-card');
+            if (!data || !data.createdAt) {
+                card.style.display = 'none';
+                return;
+            }
+
+            const elapsed = Date.now() - data.createdAt;
+            const remaining = 10000 - elapsed; // 10 seconds limit
+
+            if (remaining <= 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
             document.getElementById('display-q').innerText = data.question;
             document.getElementById('display-a-text').innerText = data.optA;
             document.getElementById('display-b-text').innerText = data.optB;
@@ -258,17 +221,80 @@
             document.getElementById('bar-a').style.width = pctA + '%';
             document.getElementById('display-b-pct').innerText = pctB + '%';
             document.getElementById('bar-b').style.width = pctB + '%';
+
+            if (pollTimer) clearTimeout(pollTimer);
+            pollTimer = setTimeout(() => {
+                card.style.display = 'none';
+            }, remaining);
         }
+
+        // 2. Sync Messages Globally (20s Visibility)
+        window.pushMessage = function() {
+            const name = document.getElementById('input-name').value.trim() || "Anonymous";
+            const text = document.getElementById('input-msg').value.trim();
+            if(!text) return;
+
+            push(ref(db, 'messages'), { name, text, time: Date.now() });
+            document.getElementById('input-msg').value = '';
+        }
+
+        const msgRef = ref(db, 'messages');
+        let msgTimer = null;
+
+        onValue(msgRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const keys = Object.keys(data);
+                const latestMsg = data[keys[keys.length - 1]];
+                renderMessage(latestMsg);
+            }
+        });
 
         function renderMessage(msg) {
             const card = document.getElementById('msg-card');
+            if (!msg || !msg.time) {
+                card.style.display = 'none';
+                return;
+            }
+
+            const elapsed = Date.now() - msg.time;
+            const remaining = 20000 - elapsed; // 20 seconds limit
+
+            if (remaining <= 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            card.style.display = 'block';
             card.classList.remove('animate-slide');
             void card.offsetWidth;
-            card.endswith = card.classList.add('animate-slide');
+            card.classList.add('animate-slide');
 
             document.getElementById('display-author').innerText = `👤 ${msg.name}`;
             document.getElementById('display-text').innerText = `"${msg.text}"`;
+
+            if (msgTimer) clearTimeout(msgTimer);
+            msgTimer = setTimeout(() => {
+                card.style.display = 'none';
+            }, remaining);
         }
+
+        // 3. Sync Reactions Globally
+        window.triggerReaction = function(emoji) {
+            push(ref(db, 'reactions'), { emoji, time: Date.now() });
+        }
+
+        const reactRef = ref(db, 'reactions');
+        onValue(reactRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const keys = Object.keys(data);
+                const latestReact = data[keys[keys.length - 1]];
+                if (Date.now() - latestReact.time < 3000) {
+                    spawnEmoji(latestReact.emoji);
+                }
+            }
+        });
 
         function spawnEmoji(emoji) {
             const container = document.getElementById('floating-reactions');
