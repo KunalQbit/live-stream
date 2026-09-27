@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Live Room</title>
     <style>
         :root {
@@ -74,15 +74,19 @@
 
         /* Floating Poll Stack */
         .poll-stack { position: absolute; top: 70px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; z-index: 20; pointer-events: none; padding: 0 1rem; transition: all 0.3s; }
-        .floating-poll { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); padding: 0.75rem 1rem; border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,0.1); width: 100%; max-width: 350px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1); transition: transform 0.2s, opacity 0.3s; }
+        .floating-poll { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); padding: 0.5rem 0.5rem 0.5rem 1rem; border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,0.1); width: 100%; max-width: 350px; display: flex; justify-content: space-between; align-items: center; animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1); transition: transform 0.2s, opacity 0.3s; }
         .floating-poll:hover { transform: translateY(-2px); }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        .fp-title { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-        .fp-meta { font-size: 0.75rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+        
+        .fp-content { flex: 1; display: flex; justify-content: space-between; align-items: center; cursor: pointer; overflow: hidden; }
+        .fp-title { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; padding-right: 0.5rem; }
+        .fp-meta { font-size: 0.75rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .fp-close { background: transparent; border: none; color: var(--text-muted); font-size: 1.25rem; line-height: 1; padding: 0.25rem 0.5rem; margin: 0 0 0 0.5rem; cursor: pointer; border-radius: 50%; transition: background 0.2s; width: auto; }
+        .fp-close:hover { background: var(--border); color: var(--text-main); }
 
         /* In-chat Poll */
-        .chat-poll { background: var(--surface-color); border: 1px solid var(--accent); border-radius: 1rem; padding: 1rem; margin-top: 0.5rem; max-width: 300px; width: 100%; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); }
-        .chat-poll-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .chat-poll { background: var(--surface-color); border: 1px solid var(--accent); border-radius: 1rem; padding: 1rem; margin-top: 0.5rem; max-width: 300px; width: 100%; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); transition: opacity 0.3s; }
+        .chat-poll-title { font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; }
         
         /* Poll Results UI */
         .poll-option { margin-bottom: 0.75rem; position: relative; border-radius: 0.5rem; overflow: hidden; background: var(--bg-color); cursor: pointer; border: 1px solid var(--border); }
@@ -93,7 +97,7 @@
         /* Input Area */
         .input-area { background: var(--glass-bg); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 0.75rem calc(1rem + env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left)); display: flex; gap: 0.5rem; align-items: center; position: relative; z-index: 10; }
         .chat-input { flex: 1; border: none; background: var(--bg-color); padding: 0.75rem 1rem; border-radius: 1.5rem; color: var(--text-main); font-size: 1rem; outline: none; border: 1px solid var(--border); }
-        .icon-btn { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; padding: 0; font-size: 1.25rem; transition: all 0.2s; }
+        .icon-btn { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; padding: 0; font-size: 1.25rem; transition: all 0.2s; flex-shrink: 0; }
         .icon-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
         
         /* Mentions Autocomplete */
@@ -108,6 +112,24 @@
 
         /* Dynamic Options */
         .dynamic-options { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+
+        /* RESPONSIVE DESIGN (Mobile & Tablets) */
+        @media (max-width: 640px) {
+            .header { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .chat-container { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .input-area { padding-left: 0.5rem; padding-right: 0.5rem; }
+            
+            /* Give messages more breathing room on small screens */
+            .message { max-width: 92%; }
+            
+            /* Ensure polls scale down cleanly */
+            .chat-poll { max-width: 100%; }
+            .floating-poll { max-width: 100%; }
+            .fp-title { max-width: 150px; }
+            
+            /* Make modals mobile-friendly */
+            .modal-content { padding: 1.5rem; max-width: 90%; }
+        }
     </style>
 </head>
 <body>
@@ -135,7 +157,7 @@
         <div class="mentions-popup" id="mentions-popup"></div>
         <button class="icon-btn" id="btn-new-poll" title="Create Poll">📊</button>
         <input type="text" id="msg-input" class="chat-input" placeholder="Message... (use @ to mention)" autocomplete="off" maxlength="500">
-        <button class="icon-btn" id="btn-send">↑</button>
+        <button class="icon-btn" id="btn-send" title="Send Message">🚀</button>
     </footer>
 
     <!-- Welcome Modal -->
@@ -186,7 +208,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, push, set, onValue, onChildAdded, onDisconnect, serverTimestamp, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Firebase Configuration[cite: 1]
         const firebaseConfig = {
             apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9UTt9Hb1RhmAA",
             authDomain: "yt-live-stream-4e4ea.firebaseapp.com",
@@ -206,10 +227,10 @@
         let activePolls = {}; 
         let isScrolledToBottom = true;
         let activeVotePollId = null;
+        let dismissedPolls = new Set(); // Tracks floating polls the user has manually closed[cite: 5]
 
-        // Constants[cite: 1]
-        const POLL_LIFESPAN = 10 * 60 * 1000; // 10 minutes[cite: 1]
-        const POLL_FLOAT_DELAY = 30 * 1000;   // 30 seconds[cite: 1]
+        const POLL_LIFESPAN = 10 * 60 * 1000; 
+        const POLL_FLOAT_DELAY = 30 * 1000;   
 
         // --- DOM Elements ---
         const els = {
@@ -318,6 +339,7 @@
             div.className = `message ${isSelf ? 'msg-self' : 'msg-other'}`;
             
             let safeText = sanitize(msg.text || "");
+            
             // Mention Highlighting
             safeText = safeText.replace(/@([a-zA-Z0-9 ]+)/g, (match, name) => {
                 return `<span class="mention-highlight">${match}</span>`;
@@ -332,8 +354,14 @@
                         <span class="msg-time">${timeStr}</span>
                     </div>
                     <div class="chat-poll" id="chat-poll-${msg.pollId}">
-                        <div class="chat-poll-title">📊 ${safeText}</div>
-                        <button class="secondary" style="margin-top:0.5rem; padding:0.5rem" onclick="openVoteModal('${msg.pollId}')">View Poll</button>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                            <div class="chat-poll-title" style="margin-bottom: 2px;">📊 ${safeText}</div>
+                            <div id="chat-poll-timer-${msg.pollId}" style="font-size: 0.75rem; color: var(--accent); font-weight: bold; white-space: nowrap;"></div>
+                        </div>
+                        <div id="chat-poll-stats-${msg.pollId}" style="display: flex; flex-direction: column; gap: 4px; margin-top: 8px; margin-bottom: 8px; font-size: 0.8rem;">
+                            <!-- Live stats inject here automatically -->
+                        </div>
+                        <button class="secondary" style="margin-top:0.5rem; padding:0.5rem; width: 100%;" onclick="openVoteModal('${msg.pollId}')">View Poll</button>
                     </div>
                 `;
             } else {
@@ -396,7 +424,7 @@
             }
         });
 
-        // --- Poll System[cite: 1] ---
+        // --- Poll System ---
         document.getElementById('btn-new-poll').addEventListener('click', () => els.pollModal.classList.add('active'));
         document.getElementById('btn-cancel-poll').addEventListener('click', () => {
             els.pollModal.classList.remove('active');
@@ -426,7 +454,7 @@
                 options: options,
                 votes: new Array(options.length).fill(0),
                 createdAt: now,
-                expiresAt: now + POLL_LIFESPAN // 10 mins[cite: 1]
+                expiresAt: now + POLL_LIFESPAN // 10 mins
             };
 
             const newPollRef = push(ref(db, 'polls'));
@@ -450,42 +478,92 @@
             return `${m}:${s.toString().padStart(2, '0')}`;
         }
 
-        // --- Poll UI Lifecycle[cite: 1] ---
+        // Global dismiss function for the floating polls[cite: 5]
+        window.dismissFloatingPoll = function(id, event) {
+            event.stopPropagation(); // Prevents the click from opening the vote modal
+            dismissedPolls.add(id);
+            const fp = document.getElementById(`floating-poll-${id}`);
+            if (fp) fp.remove();
+        };
+
+        // --- Poll UI Lifecycle ---
         function updatePollUI() {
             const now = Date.now();
-            let floatingPollsHTML = '';
-
-            // Sort active polls by newest first for the stack[cite: 1]
             const sortedPollIds = Object.keys(activePolls).sort((a, b) => activePolls[b].createdAt - activePolls[a].createdAt);
+            const currentFloatingIds = new Set();
 
             sortedPollIds.forEach(id => {
                 const poll = activePolls[id];
                 const age = now - poll.createdAt;
                 const remaining = poll.expiresAt - now;
                 const isExpired = remaining <= 0;
+                const totalVotes = (poll.votes || []).reduce((a, b) => a + b, 0);
 
-                // Chat injection UI update
+                // Update chat injection UI safely
                 const chatPollEl = document.getElementById(`chat-poll-${id}`);
                 if (chatPollEl) {
+                    const timerEl = document.getElementById(`chat-poll-timer-${id}`);
+                    const statsEl = document.getElementById(`chat-poll-stats-${id}`);
+
+                    if (timerEl) {
+                        timerEl.textContent = isExpired ? "Ended" : formatTime(remaining);
+                    }
+
+                    if (statsEl) {
+                        let statsHtml = '';
+                        poll.options.slice(0, 2).forEach((opt, idx) => {
+                            const count = poll.votes ? (poll.votes[idx] || 0) : 0;
+                            const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+                            statsHtml += `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-color); border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px;">
+                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 75%; font-weight: 500;">${sanitize(opt)}</span>
+                                    <span style="font-weight: 700; color: var(--accent);">${pct}%</span>
+                                </div>
+                            `;
+                        });
+                        statsEl.innerHTML = statsHtml;
+                    }
+
                     if (isExpired) {
                         chatPollEl.style.opacity = '0.6';
-                        chatPollEl.querySelector('button').textContent = "View Results";
+                        const btn = chatPollEl.querySelector('button');
+                        if (btn) btn.textContent = "View Results";
                     }
                 }
 
-                // Floating Poll Logic (Wait 30s)[cite: 1]
-                if (age >= POLL_FLOAT_DELAY && !isExpired) {
-                    const totalVotes = (poll.votes || []).reduce((a, b) => a + b, 0);
-                    floatingPollsHTML += `
-                        <div class="floating-poll" onclick="openVoteModal('${id}')">
-                            <div class="fp-title">📊 ${sanitize(poll.q)}</div>
-                            <div class="fp-meta">${formatTime(remaining)} • ${totalVotes} votes</div>
-                        </div>
-                    `;
+                // Smart Floating Poll Update (Fixes flickering/blinking)[cite: 5]
+                if (age >= POLL_FLOAT_DELAY && !isExpired && !dismissedPolls.has(id)) {
+                    currentFloatingIds.add(id);
+                    let fp = document.getElementById(`floating-poll-${id}`);
+                    const metaText = `${formatTime(remaining)} • ${totalVotes} votes`;
+
+                    if (!fp) {
+                        // Create floating poll if it doesn't exist
+                        fp = document.createElement('div');
+                        fp.className = 'floating-poll';
+                        fp.id = `floating-poll-${id}`;
+                        fp.innerHTML = `
+                            <div class="fp-content" onclick="openVoteModal('${id}')">
+                                <div class="fp-title">📊 ${sanitize(poll.q)}</div>
+                                <div class="fp-meta" id="fp-meta-${id}">${metaText}</div>
+                            </div>
+                            <button class="fp-close" onclick="dismissFloatingPoll('${id}', event)">✕</button>
+                        `;
+                        els.pollStack.appendChild(fp);
+                    } else {
+                        // Just update the timer text to prevent animation re-triggers
+                        document.getElementById(`fp-meta-${id}`).textContent = metaText;
+                    }
                 }
             });
 
-            els.pollStack.innerHTML = floatingPollsHTML;
+            // Cleanup any floating polls that have expired or been dismissed
+            Array.from(els.pollStack.children).forEach(child => {
+                const id = child.id.replace('floating-poll-', '');
+                if (!currentFloatingIds.has(id)) {
+                    child.remove();
+                }
+            });
             
             // Update live countdown in vote modal if open
             if(activeVotePollId && activePolls[activeVotePollId]) {
@@ -526,7 +604,6 @@
                 const count = poll.votes ? (poll.votes[idx] || 0) : 0;
                 const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
                 
-                // If expired or user has voted, show results[cite: 1]. Otherwise, show clickable options.
                 if (isExpired || hasVoted) {
                     html += `
                         <div class="poll-option">
@@ -553,7 +630,7 @@
         }
 
         window.castVote = function(pollId, optionIndex) {
-            if (localStorage.getItem(`voted_${pollId}`)) return; // Client side double-vote check[cite: 1]
+            if (localStorage.getItem(`voted_${pollId}`)) return; 
             
             localStorage.setItem(`voted_${pollId}`, 'true');
             runTransaction(ref(db, `polls/${pollId}/votes/${optionIndex}`), (current) => (current || 0) + 1);
