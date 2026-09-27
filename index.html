@@ -32,10 +32,10 @@
         <div>
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full uppercase tracking-wider">Stream Control</span>
-                <span class="text-xs text-emerald-400 font-mono">● Instant Sync</span>
+                <span class="text-xs text-emerald-400 font-mono">● Global Cloud Sync</span>
             </div>
             <h1 class="text-xl font-black mt-2">Broadcast Controller</h1>
-            <p class="text-slate-400 text-xs">Update polls or push live jokes on the fly.</p>
+            <p class="text-slate-400 text-xs">Update polls or push live jokes worldwide.</p>
         </div>
 
         <!-- Update Poll Form -->
@@ -71,7 +71,7 @@
     <!-- ================= OBS CAPTURE SCREEN (9:16 Vertical for YouTube Shorts) ================= -->
     <div id="obs-screen" class="w-[400px] h-[711px] bg-slate-900 border-4 border-slate-800 rounded-[36px] p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden broadcast-glow">
         
-        <!-- Floating Reaction Container (Erupts emojis when clicked) -->
+        <!-- Floating Reaction Container -->
         <div id="floating-reactions" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
 
         <!-- Top Header Status -->
@@ -83,23 +83,23 @@
                 </span>
                 <span class="text-[10px] font-black tracking-widest text-red-400 uppercase">YT SHORTS LIVE</span>
             </div>
-            <div id="online-badge" class="text-[10px] font-mono text-slate-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded-full">🔥 1.4K WATCHING</div>
+            <div id="online-badge" class="text-[10px] font-mono text-slate-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded-full">🔥 100% LIVE</div>
         </div>
 
-        <!-- Center Visual Stack (Designed for Maximum Retention) -->
+        <!-- Center Visual Stack -->
         <div class="my-auto space-y-5 z-10 w-full">
             
             <!-- Live Interactive Poll Card -->
             <div class="bg-slate-950/85 border border-slate-800/80 p-5 rounded-3xl backdrop-blur-md space-y-4 shadow-xl">
                 <div class="text-center space-y-1">
                     <span class="text-[9px] uppercase font-black tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">Live Community Poll</span>
-                    <h2 id="display-q" class="text-xl font-black leading-snug pt-1 text-slate-100">Should Monday be banned globally?</h2>
+                    <h2 id="display-q" class="text-xl font-black leading-snug pt-1 text-slate-100">Loading Question...</h2>
                 </div>
 
                 <!-- Option A -->
                 <div class="space-y-1">
                     <div class="flex justify-between font-bold text-xs">
-                        <span id="display-a-text" class="text-indigo-300">YES</span>
+                        <span id="display-a-text" class="text-indigo-300">Option A</span>
                         <span id="display-a-pct" class="text-indigo-400 font-mono">50%</span>
                     </div>
                     <div class="w-full bg-slate-900 h-4 rounded-full overflow-hidden p-0.5 border border-slate-800/80">
@@ -110,7 +110,7 @@
                 <!-- Option B -->
                 <div class="space-y-1">
                     <div class="flex justify-between font-bold text-xs">
-                        <span id="display-b-text" class="text-pink-300">NO</span>
+                        <span id="display-b-text" class="text-pink-300">Option B</span>
                         <span id="display-b-pct" class="text-pink-400 font-mono">50%</span>
                     </div>
                     <div class="w-full bg-slate-900 h-4 rounded-full overflow-hidden p-0.5 border border-slate-800/80">
@@ -125,14 +125,13 @@
                     <span id="display-author" class="text-emerald-400 font-bold text-[10px] uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full">👤 System</span>
                     <span class="text-[9px] text-slate-500 font-mono">Just Now</span>
                 </div>
-                <p id="display-text" class="text-base font-bold text-slate-100 tracking-tight leading-snug">"Tap the link to vote live on screen right now!"</p>
+                <p id="display-text" class="text-base font-bold text-slate-100 tracking-tight leading-snug">"Type your joke or vote to see it pop up live!"</p>
             </div>
 
         </div>
 
         <!-- Bottom Footer Callout & Reaction Triggers -->
         <div class="space-y-2 z-10">
-            <!-- Reaction Buttons (Viewers can tap these to create visual hype on stream) -->
             <div class="grid grid-cols-3 gap-2">
                 <button onclick="triggerReaction('🔥')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">🔥 Fire</button>
                 <button onclick="triggerReaction('😂')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">😂 Haha</button>
@@ -147,63 +146,105 @@
     </div>
 
 
-    <!-- ================= ENGINE SCRIPT ================= -->
-    <script>
-        const channel = new BroadcastChannel('yt_shorts_live_stream_v2');
+    <!-- ================= FIREBASE CLOUD ENGINE ================= -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, update, push, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        let state = {
-            question: "Should Monday be banned globally?",
-            optA: "YES",
-            optB: "NO",
-            votesA: 24,
-            votesB: 16
+        // Your Firebase configuration from your console screenshot[cite: 9]
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9Ut79Hb1RhmAA",
+            authDomain: "yt-live-stream-4e4ea.firebaseapp.com",
+            databaseURL: "https://yt-live-stream-4e4ea-default-rtdb.firebaseio.com",
+            projectId: "yt-live-stream-4e4ea",
+            storageBucket: "yt-live-stream-4e4ea.firebasestorage.app",
+            messagingSenderId: "214476471691",
+            appId: "1:214476471691:web:12c9d1440215c90cac838e"
         };
 
-        function updatePoll() {
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 1. Sync Poll Data Globally
+        const pollRef = ref(db, 'activePoll');
+        onValue(pollRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                renderPoll(data);
+            } else {
+                // Initialize default poll if database is empty
+                set(pollRef, {
+                    question: "Should Monday be banned globally?",
+                    optA: "YES",
+                    optB: "NO",
+                    votesA: 24,
+                    votesB: 16
+                });
+            }
+        });
+
+        window.updatePoll = function() {
             const q = document.getElementById('input-q').value.trim();
             const a = document.getElementById('input-a').value.trim();
             const b = document.getElementById('input-b').value.trim();
 
-            if(q) state.question = q;
-            if(a) state.optA = a;
-            if(b) state.optB = b;
-            state.votesA = 1;
-            state.votesB = 1;
+            update(pollRef, {
+                question: q || "Should Monday be banned globally?",
+                optA: a || "YES",
+                optB: b || "NO",
+                votesA: 1,
+                votesB: 1
+            });
 
-            broadcastState();
             document.getElementById('input-q').value = '';
             document.getElementById('input-a').value = '';
             document.getElementById('input-b').value = '';
         }
 
-        function castVote(opt) {
-            if(opt === 'A') state.votesA++;
-            if(opt === 'B') state.votesB++;
-            broadcastState();
+        window.castVote = function(opt) {
+            const field = opt === 'A' ? 'votesA' : 'votesB';
+            runTransaction(ref(db, `activePoll/${field}`), (current) => (current || 0) + 1);
         }
 
-        function pushMessage() {
+        // 2. Sync Messages Globally
+        window.pushMessage = function() {
             const name = document.getElementById('input-name').value.trim() || "Anonymous";
             const text = document.getElementById('input-msg').value.trim();
             if(!text) return;
 
-            const msgData = { name, text };
-            channel.postMessage({ type: 'MSG', data: msgData });
-            renderMessage(msgData);
-
+            push(ref(db, 'messages'), { name, text, time: Date.now() });
             document.getElementById('input-msg').value = '';
         }
 
-        function triggerReaction(emoji) {
-            channel.postMessage({ type: 'REACT', emoji: emoji });
-            spawnEmoji(emoji);
+        const msgRef = ref(db, 'messages');
+        onValue(msgRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const keys = Object.keys(data);
+                const latestMsg = data[keys[keys.length - 1]];
+                renderMessage(latestMsg);
+            }
+        });
+
+        // 3. Sync Reactions Globally
+        window.triggerReaction = function(emoji) {
+            push(ref(db, 'reactions'), { emoji, time: Date.now() });
         }
 
-        function broadcastState() {
-            channel.postMessage({ type: 'POLL', data: state });
-            renderPoll(state);
-        }
+        const reactRef = ref(db, 'reactions');
+        onValue(reactRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const keys = Object.keys(data);
+                const latestReact = data[keys[keys.length - 1]];
+                // Only spawn if recent (prevent spam on load)
+                if (Date.now() - latestReact.time < 3000) {
+                    spawnEmoji(latestReact.emoji);
+                }
+            }
+        });
 
+        // Render Functions
         function renderPoll(data) {
             document.getElementById('display-q').innerText = data.question;
             document.getElementById('display-a-text').innerText = data.optA;
@@ -215,7 +256,6 @@
 
             document.getElementById('display-a-pct').innerText = pctA + '%';
             document.getElementById('bar-a').style.width = pctA + '%';
-
             document.getElementById('display-b-pct').innerText = pctB + '%';
             document.getElementById('bar-b').style.width = pctB + '%';
         }
@@ -223,8 +263,8 @@
         function renderMessage(msg) {
             const card = document.getElementById('msg-card');
             card.classList.remove('animate-slide');
-            void card.offsetWidth; // trigger reflow
-            card.classList.add('animate-slide');
+            void card.offsetWidth;
+            card.endswith = card.classList.add('animate-slide');
 
             document.getElementById('display-author').innerText = `👤 ${msg.name}`;
             document.getElementById('display-text').innerText = `"${msg.text}"`;
@@ -235,30 +275,11 @@
             const el = document.createElement('div');
             el.innerText = emoji;
             el.className = "absolute text-2xl floating-reaction font-bold select-none";
-            // Random horizontal position across the vertical card
             el.style.left = Math.random() * 80 + 10 + '%';
             el.style.bottom = '40px';
             container.appendChild(el);
-
-            setTimeout(() => {
-                el.remove();
-            }, 1200);
+            setTimeout(() => el.remove(), 1200);
         }
-
-        // Listen to cross-tab / cross-device signals
-        channel.onmessage = (event) => {
-            if(event.data.type === 'POLL') {
-                state = event.data.data;
-                renderPoll(state);
-            } else if(event.data.type === 'MSG') {
-                renderMessage(event.data.data);
-            } else if(event.data.type === 'REACT') {
-                spawnEmoji(event.data.emoji);
-            }
-        };
-
-        // Initial render
-        renderPoll(state);
     </script>
 </body>
 </html>
