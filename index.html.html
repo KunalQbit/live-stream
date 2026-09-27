@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Stream Studio - YT Shorts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes ambientGlow {
+            0%, 100% { box-shadow: 0 0 30px rgba(99, 102, 241, 0.2), inset 0 0 15px rgba(99, 102, 241, 0.1); }
+            50% { box-shadow: 0 0 60px rgba(236, 72, 153, 0.3), inset 0 0 25px rgba(236, 72, 153, 0.2); }
+        }
+        .broadcast-glow { animation: ambientGlow 4s ease-in-out infinite; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes floatEmoji {
+            0% { transform: translateY(0px) scale(1); opacity: 1; }
+            100% { transform: translateY(-120px) scale(1.5); opacity: 0; }
+        }
+        .floating-reaction { animation: floatEmoji 1.2s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8 select-none">
+
+    <!-- ================= CONTROL PANEL (Your Laptop / Admin View) ================= -->
+    <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5 backdrop-blur">
+        <div>
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded-full uppercase tracking-wider">Stream Control</span>
+                <span class="text-xs text-emerald-400 font-mono">● Instant Sync</span>
+            </div>
+            <h1 class="text-xl font-black mt-2">Broadcast Controller</h1>
+            <p class="text-slate-400 text-xs">Update polls or push live jokes on the fly.</p>
+        </div>
+
+        <!-- Update Poll Form -->
+        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+            <h2 class="font-bold text-xs uppercase text-indigo-300 tracking-wider">📊 Change Live Poll</h2>
+            <input type="text" id="input-q" placeholder="Ask a wild question..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
+            <div class="grid grid-cols-2 gap-2">
+                <input type="text" id="input-a" placeholder="Option A" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                <input type="text" id="input-b" placeholder="Option B" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <button onclick="updatePoll()" class="w-full bg-indigo-600 hover:bg-indigo-500 font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/20">Launch New Poll 🚀</button>
+        </div>
+
+        <!-- Push Message Form -->
+        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-3">
+            <h2 class="font-bold text-xs uppercase text-emerald-300 tracking-wider">💬 Push Joke / Hot Take</h2>
+            <input type="text" id="input-name" placeholder="Your Name / Anonymous" value="Anonymous" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+            <textarea id="input-msg" placeholder="Type something funny..." rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+            <button onclick="pushMessage()" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20">Show on Stream ✨</button>
+        </div>
+
+        <!-- Viewer Simulation (For Testing) -->
+        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 space-y-2">
+            <h2 class="font-bold text-xs uppercase text-pink-300 tracking-wider">⚡ Test Interactions</h2>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="castVote('A')" class="bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-xs font-bold border border-slate-700">Vote Option A</button>
+                <button onclick="castVote('B')" class="bg-slate-800 hover:bg-slate-700 py-2 rounded-xl text-xs font-bold border border-slate-700">Vote Option B</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= OBS CAPTURE SCREEN (9:16 Vertical for YouTube Shorts) ================= -->
+    <div id="obs-screen" class="w-[400px] h-[711px] bg-slate-900 border-4 border-slate-800 rounded-[36px] p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden broadcast-glow">
+        
+        <!-- Floating Reaction Container (Erupts emojis when clicked) -->
+        <div id="floating-reactions" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+
+        <!-- Top Header Status -->
+        <div class="flex justify-between items-center z-10">
+            <div class="flex items-center space-x-2 bg-red-500/10 border border-red-500/30 px-3 py-1 rounded-full">
+                <span class="flex h-2 w-2 relative">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                <span class="text-[10px] font-black tracking-widest text-red-400 uppercase">YT SHORTS LIVE</span>
+            </div>
+            <div id="online-badge" class="text-[10px] font-mono text-slate-400 font-bold bg-slate-800/80 px-2.5 py-1 rounded-full">🔥 1.4K WATCHING</div>
+        </div>
+
+        <!-- Center Visual Stack (Designed for Maximum Retention) -->
+        <div class="my-auto space-y-5 z-10 w-full">
+            
+            <!-- Live Interactive Poll Card -->
+            <div class="bg-slate-950/85 border border-slate-800/80 p-5 rounded-3xl backdrop-blur-md space-y-4 shadow-xl">
+                <div class="text-center space-y-1">
+                    <span class="text-[9px] uppercase font-black tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full">Live Community Poll</span>
+                    <h2 id="display-q" class="text-xl font-black leading-snug pt-1 text-slate-100">Should Monday be banned globally?</h2>
+                </div>
+
+                <!-- Option A -->
+                <div class="space-y-1">
+                    <div class="flex justify-between font-bold text-xs">
+                        <span id="display-a-text" class="text-indigo-300">YES</span>
+                        <span id="display-a-pct" class="text-indigo-400 font-mono">50%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-4 rounded-full overflow-hidden p-0.5 border border-slate-800/80">
+                        <div id="bar-a" class="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full rounded-full transition-all duration-500" style="width: 50%"></div>
+                    </div>
+                </div>
+
+                <!-- Option B -->
+                <div class="space-y-1">
+                    <div class="flex justify-between font-bold text-xs">
+                        <span id="display-b-text" class="text-pink-300">NO</span>
+                        <span id="display-b-pct" class="text-pink-400 font-mono">50%</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-4 rounded-full overflow-hidden p-0.5 border border-slate-800/80">
+                        <div id="bar-b" class="bg-gradient-to-r from-pink-600 to-pink-400 h-full rounded-full transition-all duration-500" style="width: 50%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Message Ticker Card -->
+            <div id="msg-card" class="bg-slate-950/85 border border-slate-800/80 p-4 rounded-3xl backdrop-blur-md space-y-1.5 shadow-xl animate-slide">
+                <div class="flex items-center justify-between">
+                    <span id="display-author" class="text-emerald-400 font-bold text-[10px] uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full">👤 System</span>
+                    <span class="text-[9px] text-slate-500 font-mono">Just Now</span>
+                </div>
+                <p id="display-text" class="text-base font-bold text-slate-100 tracking-tight leading-snug">"Tap the link to vote live on screen right now!"</p>
+            </div>
+
+        </div>
+
+        <!-- Bottom Footer Callout & Reaction Triggers -->
+        <div class="space-y-2 z-10">
+            <!-- Reaction Buttons (Viewers can tap these to create visual hype on stream) -->
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="triggerReaction('🔥')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">🔥 Fire</button>
+                <button onclick="triggerReaction('😂')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">😂 Haha</button>
+                <button onclick="triggerReaction('❤️')" class="bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/50 py-1.5 rounded-xl text-xs font-bold transition active:scale-95">❤️ Love</button>
+            </div>
+
+            <div class="text-center bg-gradient-to-t from-slate-950 pt-2">
+                <p class="text-[10px] font-medium text-slate-400">Join the live conversation</p>
+                <div class="mt-1 bg-white text-slate-950 font-black text-xs py-1.5 rounded-xl tracking-wider shadow-lg">YOURWEBSITE.COM</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= ENGINE SCRIPT ================= -->
+    <script>
+        const channel = new BroadcastChannel('yt_shorts_live_stream_v2');
+
+        let state = {
+            question: "Should Monday be banned globally?",
+            optA: "YES",
+            optB: "NO",
+            votesA: 24,
+            votesB: 16
+        };
+
+        function updatePoll() {
+            const q = document.getElementById('input-q').value.trim();
+            const a = document.getElementById('input-a').value.trim();
+            const b = document.getElementById('input-b').value.trim();
+
+            if(q) state.question = q;
+            if(a) state.optA = a;
+            if(b) state.optB = b;
+            state.votesA = 1;
+            state.votesB = 1;
+
+            broadcastState();
+            document.getElementById('input-q').value = '';
+            document.getElementById('input-a').value = '';
+            document.getElementById('input-b').value = '';
+        }
+
+        function castVote(opt) {
+            if(opt === 'A') state.votesA++;
+            if(opt === 'B') state.votesB++;
+            broadcastState();
+        }
+
+        function pushMessage() {
+            const name = document.getElementById('input-name').value.trim() || "Anonymous";
+            const text = document.getElementById('input-msg').value.trim();
+            if(!text) return;
+
+            const msgData = { name, text };
+            channel.postMessage({ type: 'MSG', data: msgData });
+            renderMessage(msgData);
+
+            document.getElementById('input-msg').value = '';
+        }
+
+        function triggerReaction(emoji) {
+            channel.postMessage({ type: 'REACT', emoji: emoji });
+            spawnEmoji(emoji);
+        }
+
+        function broadcastState() {
+            channel.postMessage({ type: 'POLL', data: state });
+            renderPoll(state);
+        }
+
+        function renderPoll(data) {
+            document.getElementById('display-q').innerText = data.question;
+            document.getElementById('display-a-text').innerText = data.optA;
+            document.getElementById('display-b-text').innerText = data.optB;
+
+            const total = (data.votesA + data.votesB) || 1;
+            const pctA = Math.round((data.votesA / total) * 100);
+            const pctB = 100 - pctA;
+
+            document.getElementById('display-a-pct').innerText = pctA + '%';
+            document.getElementById('bar-a').style.width = pctA + '%';
+
+            document.getElementById('display-b-pct').innerText = pctB + '%';
+            document.getElementById('bar-b').style.width = pctB + '%';
+        }
+
+        function renderMessage(msg) {
+            const card = document.getElementById('msg-card');
+            card.classList.remove('animate-slide');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('animate-slide');
+
+            document.getElementById('display-author').innerText = `👤 ${msg.name}`;
+            document.getElementById('display-text').innerText = `"${msg.text}"`;
+        }
+
+        function spawnEmoji(emoji) {
+            const container = document.getElementById('floating-reactions');
+            const el = document.createElement('div');
+            el.innerText = emoji;
+            el.className = "absolute text-2xl floating-reaction font-bold select-none";
+            // Random horizontal position across the vertical card
+            el.style.left = Math.random() * 80 + 10 + '%';
+            el.style.bottom = '40px';
+            container.appendChild(el);
+
+            setTimeout(() => {
+                el.remove();
+            }, 1200);
+        }
+
+        // Listen to cross-tab / cross-device signals
+        channel.onmessage = (event) => {
+            if(event.data.type === 'POLL') {
+                state = event.data.data;
+                renderPoll(state);
+            } else if(event.data.type === 'MSG') {
+                renderMessage(event.data.data);
+            } else if(event.data.type === 'REACT') {
+                spawnEmoji(event.data.emoji);
+            }
+        };
+
+        // Initial render
+        renderPoll(state);
+    </script>
+</body>
+</html>
