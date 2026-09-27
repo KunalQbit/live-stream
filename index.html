@@ -1,236 +1,584 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Live Stream - Join the Chat</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Live Room</title>
     <style>
-        /* Hide scrollbar for a clean mobile app feel */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Smooth pop-in animation for new chats */
-        @keyframes popIn {
-            from { opacity: 0; transform: translateY(10px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+        :root {
+            --bg-color: #f3f4f6;
+            --surface-color: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --border: rgba(0, 0, 0, 0.1);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --sys-red: #ef4444;
+            --sys-green: #10b981;
         }
-        .chat-msg { animation: popIn 0.2s ease-out forwards; }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #111827;
+                --surface-color: #1f2937;
+                --text-main: #f9fafb;
+                --text-muted: #9ca3af;
+                --glass-bg: rgba(31, 41, 55, 0.85);
+                --border: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        [data-theme="light"] { --bg-color: #f3f4f6; --surface-color: #ffffff; --text-main: #1f2937; --text-muted: #6b7280; --glass-bg: rgba(255, 255, 255, 0.8); --border: rgba(0, 0, 0, 0.1); }
+        [data-theme="dark"] { --bg-color: #111827; --surface-color: #1f2937; --text-main: #f9fafb; --text-muted: #9ca3af; --glass-bg: rgba(31, 41, 55, 0.85); --border: rgba(255, 255, 255, 0.1); }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s; }
+        
+        /* Modals & Overlays */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 1rem; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--surface-color); padding: 2rem; border-radius: 1.5rem; width: 100%; max-width: 400px; box-shadow: var(--shadow); transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+        
+        input[type="text"] { width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--bg-color); color: var(--text-main); margin-top: 0.5rem; font-size: 1rem; outline: none; transition: border-color 0.2s; }
+        input[type="text"]:focus { border-color: var(--accent); }
+        button { background: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; width: 100%; margin-top: 1rem; }
+        button:active { transform: scale(0.98); }
+        button.secondary { background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border); }
+
+        /* App Layout */
+        .header { background: var(--glass-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 1rem calc(1rem + env(safe-area-inset-right)) 1rem calc(1rem + env(safe-area-inset-left)); display: flex; justify-content: space-between; align-items: center; z-index: 10; padding-top: max(1rem, env(safe-area-inset-top)); }
+        .header-title { font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
+        .status-dot { width: 8px; height: 8px; background: var(--sys-green); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--sys-green); }
+        .header-stats { font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: center; gap: 1rem; }
+        .theme-toggle { background: transparent; color: var(--text-main); width: auto; padding: 0.5rem; margin: 0; font-size: 1.25rem; }
+
+        .chat-container { flex: 1; overflow-y: auto; padding: 1rem calc(1rem + env(safe-area-inset-right)) 5rem calc(1rem + env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 1rem; scroll-behavior: smooth; position: relative; }
+        
+        /* Messages */
+        .message { display: flex; flex-direction: column; max-width: 85%; animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-self { align-self: flex-end; }
+        .msg-header { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.875rem; }
+        .msg-self .msg-header { flex-direction: row-reverse; }
+        .msg-name { font-weight: 600; color: var(--accent); }
+        .msg-time { color: var(--text-muted); font-size: 0.75rem; }
+        .msg-bubble { background: var(--surface-color); padding: 0.75rem 1rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); line-height: 1.4; word-wrap: break-word; }
+        .msg-self .msg-bubble { background: var(--accent); color: white; border: none; border-bottom-right-radius: 0.25rem; }
+        .msg-other .msg-bubble { border-bottom-left-radius: 0.25rem; }
+        .mention-highlight { color: var(--accent); font-weight: 700; background: rgba(99, 102, 241, 0.1); padding: 0 4px; border-radius: 4px; }
+        .msg-self .mention-highlight { color: #fff; background: rgba(255,255,255,0.2); }
+
+        /* Floating Poll Stack */
+        .poll-stack { position: absolute; top: 70px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; z-index: 20; pointer-events: none; padding: 0 1rem; transition: all 0.3s; }
+        .floating-poll { pointer-events: auto; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--border); padding: 0.75rem 1rem; border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,0.1); width: 100%; max-width: 350px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1); transition: transform 0.2s, opacity 0.3s; }
+        .floating-poll:hover { transform: translateY(-2px); }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        .fp-title { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .fp-meta { font-size: 0.75rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* In-chat Poll */
+        .chat-poll { background: var(--surface-color); border: 1px solid var(--accent); border-radius: 1rem; padding: 1rem; margin-top: 0.5rem; max-width: 300px; width: 100%; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); }
+        .chat-poll-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        
+        /* Poll Results UI */
+        .poll-option { margin-bottom: 0.75rem; position: relative; border-radius: 0.5rem; overflow: hidden; background: var(--bg-color); cursor: pointer; border: 1px solid var(--border); }
+        .poll-option-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(99, 102, 241, 0.2); width: 0%; transition: width 0.5s ease-out; z-index: 1; }
+        .poll-option-content { position: relative; z-index: 2; display: flex; justify-content: space-between; padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 500; pointer-events: none; }
+        .poll-expired .poll-option { cursor: default; }
+        
+        /* Input Area */
+        .input-area { background: var(--glass-bg); backdrop-filter: blur(12px); border-top: 1px solid var(--border); padding: 0.75rem calc(1rem + env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) calc(1rem + env(safe-area-inset-left)); display: flex; gap: 0.5rem; align-items: center; position: relative; z-index: 10; }
+        .chat-input { flex: 1; border: none; background: var(--bg-color); padding: 0.75rem 1rem; border-radius: 1.5rem; color: var(--text-main); font-size: 1rem; outline: none; border: 1px solid var(--border); }
+        .icon-btn { background: var(--bg-color); border: 1px solid var(--border); color: var(--text-main); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0; padding: 0; font-size: 1.25rem; transition: all 0.2s; }
+        .icon-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        
+        /* Mentions Autocomplete */
+        .mentions-popup { position: absolute; bottom: 100%; left: 1rem; background: var(--surface-color); border: 1px solid var(--border); border-radius: 0.75rem; box-shadow: var(--shadow); max-height: 150px; overflow-y: auto; display: none; z-index: 20; min-width: 150px; margin-bottom: 0.5rem; }
+        .mentions-popup.active { display: block; }
+        .mention-item { padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; }
+        .mention-item:hover { background: var(--bg-color); color: var(--accent); }
+
+        /* Unread Badge */
+        .unread-badge { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--accent); color: white; padding: 0.5rem 1rem; border-radius: 1rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 15; }
+        .unread-badge.active { opacity: 1; pointer-events: auto; }
+
+        /* Dynamic Options */
+        .dynamic-options { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white h-screen flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden font-sans selection:bg-purple-500/30">
+<body>
 
-    <!-- ================= TOP HEADER ================= -->
-    <div class="bg-zinc-900/80 backdrop-blur-md border-b border-white/10 p-4 sticky top-0 z-20 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="bg-rose-600 animate-pulse w-3 h-3 rounded-full"></div>
-            <h1 class="font-bold text-lg tracking-tight">Live Broadcast</h1>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-title">
+            <span class="status-dot" id="conn-status"></span> LIVE ROOM
         </div>
-        <span class="bg-white/10 text-xs font-mono px-2.5 py-1 rounded-md text-zinc-300">Live Chat</span>
-    </div>
-
-    <!-- ================= ANNOUNCEMENT BANNER ================= -->
-    <div id="public-announcement" class="bg-blue-600/90 text-white p-3 text-sm font-bold shadow-md hidden z-10">
-        📢 <span id="public-announcement-text"></span>
-    </div>
-
-    <!-- ================= INTERACTIVE POLL UI ================= -->
-    <div id="public-poll" class="hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border-b border-purple-500/30 p-5 shadow-lg z-10 shrink-0">
-        <div class="flex justify-between items-center mb-2">
-            <span class="text-[10px] uppercase font-black tracking-widest text-purple-300 bg-purple-500/30 px-2 py-1 rounded-md">Live Poll</span>
+        <div class="header-stats">
+            <span id="online-count">0 online</span>
+            <button class="theme-toggle" id="theme-btn">🌓</button>
         </div>
-        <h2 id="poll-q" class="text-base font-bold text-white mb-3">Question goes here?</h2>
-        
-        <div class="space-y-2">
-            <button onclick="vote('A')" id="btn-a" class="w-full text-left relative overflow-hidden bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all active:scale-[0.98]">
-                <div id="bar-a" class="absolute left-0 top-0 bottom-0 bg-purple-600/60 transition-all duration-500 z-0" style="width: 0%"></div>
-                <div class="relative z-10 flex justify-between font-bold text-sm">
-                    <span id="opt-a">Option A</span>
-                    <span id="pct-a" class="font-mono">0%</span>
-                </div>
-            </button>
-            <button onclick="vote('B')" id="btn-b" class="w-full text-left relative overflow-hidden bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all active:scale-[0.98]">
-                <div id="bar-b" class="absolute left-0 top-0 bottom-0 bg-pink-600/60 transition-all duration-500 z-0" style="width: 0%"></div>
-                <div class="relative z-10 flex justify-between font-bold text-sm">
-                    <span id="opt-b">Option B</span>
-                    <span id="pct-b" class="font-mono">0%</span>
-                </div>
-            </button>
+    </header>
+
+    <!-- Floating Poll Stack -->
+    <div class="poll-stack" id="poll-stack"></div>
+
+    <!-- Chat Area -->
+    <main class="chat-container" id="chat-feed"></main>
+    <div class="unread-badge" id="unread-badge">↓ New messages</div>
+
+    <!-- Input Area -->
+    <footer class="input-area">
+        <div class="mentions-popup" id="mentions-popup"></div>
+        <button class="icon-btn" id="btn-new-poll" title="Create Poll">📊</button>
+        <input type="text" id="msg-input" class="chat-input" placeholder="Message... (use @ to mention)" autocomplete="off" maxlength="500">
+        <button class="icon-btn" id="btn-send">↑</button>
+    </footer>
+
+    <!-- Welcome Modal -->
+    <div class="modal-overlay" id="welcome-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 0.5rem;">Welcome to the room 👋</h2>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">Choose a display name to enter the public chat.</p>
+            <form id="form-join">
+                <input type="text" id="input-name" placeholder="Your name..." required maxlength="20" pattern="[a-zA-Z0-9 ]+">
+                <button type="submit">Enter Chat</button>
+            </form>
         </div>
-        <p id="vote-msg" class="text-xs text-center text-purple-300 mt-3 hidden">Thanks for voting!</p>
     </div>
 
-    <!-- ================= CHAT FEED ================= -->
-    <div id="chat-feed" class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 pb-2">
-        <!-- Chat messages will inject here -->
-        <div class="text-center text-xs text-zinc-500 my-2">Welcome to the live chat! Be respectful.</div>
-    </div>
-
-    <!-- ================= CHAT INPUT & REACTIONS ================= -->
-    <div class="bg-zinc-900 border-t border-white/10 p-3 pb-safe shrink-0">
-        <!-- Reaction Bar -->
-        <div class="flex justify-between items-center mb-3 px-2">
-            <span class="text-xs text-zinc-500 font-bold uppercase tracking-wider">React</span>
-            <div class="flex gap-2">
-                <button onclick="sendReaction('❤️')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">❤️</button>
-                <button onclick="sendReaction('🔥')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">🔥</button>
-                <button onclick="sendReaction('👏')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">👏</button>
+    <!-- Create Poll Modal -->
+    <div class="modal-overlay" id="poll-modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 1rem;">Create a Poll</h2>
+            <input type="text" id="poll-q" placeholder="What should we watch tonight?" required maxlength="100">
+            <div class="dynamic-options" id="poll-options-container">
+                <input type="text" class="poll-opt-input" placeholder="Option 1" required maxlength="50">
+                <input type="text" class="poll-opt-input" placeholder="Option 2" required maxlength="50">
             </div>
-        </div>
-
-        <!-- Text Input -->
-        <div class="flex flex-col gap-2">
-            <input type="text" id="viewer-name" placeholder="Your Name" class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors">
-            <div class="flex gap-2">
-                <input type="text" id="viewer-msg" placeholder="Type a message..." class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-amber-500 transition-colors" onkeypress="if(event.key === 'Enter') sendChat()">
-                <button onclick="sendChat()" class="bg-amber-600 hover:bg-amber-500 px-5 font-bold rounded-lg text-sm transition-all active:scale-95 shadow-md">Send</button>
+            <button class="secondary" id="btn-add-opt" style="margin-top: 0.5rem; padding: 0.5rem;">+ Add Option</button>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">Polls automatically expire after 10 minutes.</p>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="secondary" id="btn-cancel-poll">Cancel</button>
+                <button id="btn-submit-poll">Create Poll</button>
             </div>
         </div>
     </div>
 
-    <!-- ================= FIREBASE ENGINE ================= -->
+    <!-- Vote Modal -->
+    <div class="modal-overlay" id="vote-modal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem;">
+                <h2 id="vote-q">Question?</h2>
+                <span id="vote-time" style="font-size: 0.75rem; color: var(--accent); font-weight: 600; font-variant-numeric: tabular-nums;"></span>
+            </div>
+            <div id="vote-options"></div>
+            <p id="vote-total" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem; text-align: right;"></p>
+            <button class="secondary" id="btn-close-vote" style="margin-top: 1rem;">Close</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Setup -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, push, set, onValue, onChildAdded, onChildRemoved, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, onChildAdded, onDisconnect, serverTimestamp, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+        // Firebase Configuration[cite: 1]
         const firebaseConfig = {
-            apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9Ut79Hb1RhmAA",
+            apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9UTt9Hb1RhmAA",
             authDomain: "yt-live-stream-4e4ea.firebaseapp.com",
             databaseURL: "https://yt-live-stream-4e4ea-default-rtdb.firebaseio.com",
-            projectId: "yt-live-stream-4e4ea"
+            projectId: "yt-live-stream-4e4ea",
+            storageBucket: "yt-live-stream-4e4ea.firebasestorage.app",
+            messagingSenderId: "214476471691",
+            appId: "1:214476471691:web:12c9d1440215c90cac838e"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- 1. CHAT SYSTEM ---
-        const chatFeed = document.getElementById('chat-feed');
-        const sessionStartTime = Date.now() - (20 * 60 * 1000); // Ignore chats older than 20 mins
+        // --- State Management ---
+        let currentUser = { id: localStorage.getItem('chat_uid'), name: localStorage.getItem('chat_name') };
+        let onlineUsers = {};
+        let activePolls = {}; 
+        let isScrolledToBottom = true;
+        let activeVotePollId = null;
 
-        window.sendChat = function() {
-            let name = document.getElementById('viewer-name').value.trim();
-            const text = document.getElementById('viewer-msg').value.trim();
-            
-            if(!text) return;
-            if(!name) { name = "Viewer"; document.getElementById('viewer-name').value = name; }
-            
-            // Prevent users from pretending to be the Host
-            if(name.toLowerCase() === 'host') name = "Host (Fake)";
+        // Constants[cite: 1]
+        const POLL_LIFESPAN = 10 * 60 * 1000; // 10 minutes[cite: 1]
+        const POLL_FLOAT_DELAY = 30 * 1000;   // 30 seconds[cite: 1]
 
-            const newRef = push(ref(db, 'messages'));
-            set(newRef, { id: newRef.key, name, text, time: Date.now() });
-            
-            document.getElementById('viewer-msg').value = '';
+        // --- DOM Elements ---
+        const els = {
+            welcomeModal: document.getElementById('welcome-modal'),
+            formJoin: document.getElementById('form-join'),
+            inputName: document.getElementById('input-name'),
+            chatFeed: document.getElementById('chat-feed'),
+            msgInput: document.getElementById('msg-input'),
+            btnSend: document.getElementById('btn-send'),
+            onlineCount: document.getElementById('online-count'),
+            connStatus: document.getElementById('conn-status'),
+            pollStack: document.getElementById('poll-stack'),
+            themeBtn: document.getElementById('theme-btn'),
+            mentionsPopup: document.getElementById('mentions-popup'),
+            unreadBadge: document.getElementById('unread-badge'),
+            pollModal: document.getElementById('poll-modal'),
+            voteModal: document.getElementById('vote-modal')
         };
 
-        onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (snapshot) => {
-            const msg = snapshot.val();
-            if (msg.time < sessionStartTime) return;
-
-            const div = document.createElement('div');
-            div.id = `msg-${msg.id}`;
-            div.className = "chat-msg bg-black/40 border border-white/5 p-3 rounded-2xl w-fit max-w-[90%]";
-            
-            const isHost = msg.name.toLowerCase() === 'host';
-            const nameColor = isHost ? 'text-purple-400' : 'text-zinc-300';
-            const badge = isHost ? '<span class="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded-sm ml-2 uppercase">Host</span>' : '';
-
-            div.innerHTML = `
-                <div class="flex items-center mb-0.5">
-                    <span class="${nameColor} font-bold text-xs">${escapeHtml(msg.name)}</span>
-                    ${badge}
-                </div>
-                <p class="text-white text-sm leading-snug break-words">${escapeHtml(msg.text)}</p>
-            `;
-            
-            chatFeed.appendChild(div);
-            requestAnimationFrame(() => chatFeed.scrollTop = chatFeed.scrollHeight);
-        });
-
-        // Remove chat instantly if Admin deletes it
-        onChildRemoved(ref(db, 'messages'), (snapshot) => {
-            const id = snapshot.key;
-            const el = document.getElementById(`msg-${id}`);
-            if (el) el.remove();
-        });
-
-        // --- 2. POLL SYSTEM ---
-        let currentPollId = null;
-
-        window.vote = function(opt) {
-            if(!currentPollId) return;
-            
-            // Basic check to prevent spam voting from the same browser
-            if(localStorage.getItem(`voted_${currentPollId}`)) {
-                document.getElementById('vote-msg').innerText = "You have already voted!";
-                document.getElementById('vote-msg').classList.remove('hidden');
-                return;
-            }
-
-            runTransaction(ref(db, `activePoll/votes${opt}`), (curr) => (curr || 0) + 1);
-            localStorage.setItem(`voted_${currentPollId}`, 'true');
-            
-            document.getElementById('vote-msg').innerText = "Thanks for voting!";
-            document.getElementById('vote-msg').classList.remove('hidden');
-        };
-
-        onValue(ref(db, 'activePoll'), (snapshot) => {
-            const data = snapshot.val();
-            const pollEl = document.getElementById('public-poll');
-            
-            if (!data || !data.active) {
-                pollEl.classList.add('hidden');
-                return;
-            }
-
-            currentPollId = data.createdAt; // Use timestamp as unique ID
-            pollEl.classList.remove('hidden');
-
-            document.getElementById('poll-q').innerText = data.question;
-            document.getElementById('opt-a').innerText = data.optA;
-            document.getElementById('opt-b').innerText = data.optB;
-
-            const total = (data.votesA + data.votesB) || 1;
-            const pctA = Math.round((data.votesA / total) * 100);
-            const pctB = (data.votesA + data.votesB) === 0 ? 0 : 100 - pctA;
-
-            document.getElementById('pct-a').innerText = pctA + '%';
-            document.getElementById('pct-b').innerText = pctB + '%';
-            document.getElementById('bar-a').style.width = pctA + '%';
-            document.getElementById('bar-b').style.width = pctB + '%';
-
-            // Hide the vote message if a new poll starts
-            if(!localStorage.getItem(`voted_${currentPollId}`)) {
-                document.getElementById('vote-msg').classList.add('hidden');
-            }
-        });
-
-        // --- 3. ANNOUNCEMENT SYSTEM ---
-        onValue(ref(db, 'announcement'), (snapshot) => {
-            const data = snapshot.val();
-            const banner = document.getElementById('public-announcement');
-            if (data && data.active) {
-                document.getElementById('public-announcement-text').innerText = data.text;
-                banner.classList.remove('hidden');
+        // --- Initialization ---
+        function init() {
+            if (!currentUser.id || !currentUser.name) {
+                els.welcomeModal.classList.add('active');
             } else {
-                banner.classList.add('hidden');
+                setupFirebaseListeners();
+            }
+            initTheme();
+        }
+
+        // --- User Setup ---
+        els.formJoin.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = els.inputName.value.trim();
+            if (!name) return;
+            currentUser.name = sanitize(name);
+            currentUser.id = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('chat_uid', currentUser.id);
+            localStorage.setItem('chat_name', currentUser.name);
+            els.welcomeModal.classList.remove('active');
+            setupFirebaseListeners();
+        });
+
+        // --- Firebase Logic ---
+        function setupFirebaseListeners() {
+            const presenceRef = ref(db, `presence/${currentUser.id}`);
+            const connectedRef = ref(db, '.info/connected');
+            
+            onValue(connectedRef, (snap) => {
+                if (snap.val() === true) {
+                    els.connStatus.style.background = 'var(--sys-green)';
+                    els.connStatus.style.boxShadow = '0 0 8px var(--sys-green)';
+                    set(presenceRef, { name: currentUser.name, online: true });
+                    onDisconnect(presenceRef).remove();
+                } else {
+                    els.connStatus.style.background = 'var(--sys-red)';
+                    els.connStatus.style.boxShadow = '0 0 8px var(--sys-red)';
+                }
+            });
+
+            onValue(ref(db, 'presence'), (snap) => {
+                onlineUsers = snap.val() || {};
+                els.onlineCount.textContent = `${Object.keys(onlineUsers).length} online`;
+            });
+
+            const messagesQuery = query(ref(db, 'messages'), limitToLast(50));
+            onChildAdded(messagesQuery, (snap) => {
+                renderMessage(snap.val());
+            });
+
+            onValue(ref(db, 'polls'), (snap) => {
+                activePolls = snap.val() || {};
+                updatePollUI();
+                if(activeVotePollId && els.voteModal.classList.contains('active')) {
+                    renderVoteModal(activeVotePollId);
+                }
+            });
+
+            setInterval(updatePollUI, 1000); // UI Tick for countdowns
+        }
+
+        // --- Chat System ---
+        function sendMessage() {
+            const text = els.msgInput.value.trim();
+            if (!text) return;
+            if (text.length > 500) return alert("Message too long");
+
+            push(ref(db, 'messages'), {
+                uid: currentUser.id,
+                name: currentUser.name,
+                text: text,
+                time: serverTimestamp(),
+                type: 'text'
+            });
+            els.msgInput.value = '';
+            els.mentionsPopup.classList.remove('active');
+        }
+
+        els.btnSend.addEventListener('click', sendMessage);
+        els.msgInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        function renderMessage(msg) {
+            const isSelf = msg.uid === currentUser.id;
+            const div = document.createElement('div');
+            div.className = `message ${isSelf ? 'msg-self' : 'msg-other'}`;
+            
+            let safeText = sanitize(msg.text || "");
+            // Mention Highlighting
+            safeText = safeText.replace(/@([a-zA-Z0-9 ]+)/g, (match, name) => {
+                return `<span class="mention-highlight">${match}</span>`;
+            });
+
+            const timeStr = msg.time ? new Date(msg.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'just now';
+
+            if (msg.type === 'poll_announcement') {
+                div.innerHTML = `
+                    <div class="msg-header">
+                        <span class="msg-name">${sanitize(msg.name)}</span>
+                        <span class="msg-time">${timeStr}</span>
+                    </div>
+                    <div class="chat-poll" id="chat-poll-${msg.pollId}">
+                        <div class="chat-poll-title">📊 ${safeText}</div>
+                        <button class="secondary" style="margin-top:0.5rem; padding:0.5rem" onclick="openVoteModal('${msg.pollId}')">View Poll</button>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `
+                    <div class="msg-header">
+                        <span class="msg-name">${sanitize(msg.name)}</span>
+                        <span class="msg-time">${timeStr}</span>
+                    </div>
+                    <div class="msg-bubble">${safeText}</div>
+                `;
+            }
+
+            els.chatFeed.appendChild(div);
+            
+            if (isScrolledToBottom) {
+                els.chatFeed.scrollTop = els.chatFeed.scrollHeight;
+            } else {
+                els.unreadBadge.classList.add('active');
+            }
+        }
+
+        els.chatFeed.addEventListener('scroll', () => {
+            isScrolledToBottom = els.chatFeed.scrollHeight - els.chatFeed.scrollTop <= els.chatFeed.clientHeight + 50;
+            if (isScrolledToBottom) els.unreadBadge.classList.remove('active');
+        });
+
+        els.unreadBadge.addEventListener('click', () => {
+            els.chatFeed.scrollTop = els.chatFeed.scrollHeight;
+        });
+
+        // --- Mentions Autocomplete ---
+        els.msgInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const lastWord = val.split(' ').pop();
+            if (lastWord.startsWith('@') && lastWord.length > 1) {
+                const search = lastWord.substring(1).toLowerCase();
+                const matches = Object.values(onlineUsers).filter(u => u.name.toLowerCase().includes(search) && u.name !== currentUser.name);
+                
+                if (matches.length > 0) {
+                    els.mentionsPopup.innerHTML = matches.map(u => 
+                        `<div class="mention-item" data-name="${sanitize(u.name)}">${sanitize(u.name)}</div>`
+                    ).join('');
+                    els.mentionsPopup.classList.add('active');
+                } else {
+                    els.mentionsPopup.classList.remove('active');
+                }
+            } else {
+                els.mentionsPopup.classList.remove('active');
             }
         });
 
-        // --- 4. REACTIONS ---
-        window.sendReaction = function(emoji) {
-            push(ref(db, 'reactions'), { emoji, time: Date.now() });
+        els.mentionsPopup.addEventListener('click', (e) => {
+            if (e.target.classList.contains('mention-item')) {
+                const name = e.target.getAttribute('data-name');
+                const words = els.msgInput.value.split(' ');
+                words.pop();
+                els.msgInput.value = words.join(' ') + (words.length > 0 ? ' ' : '') + '@' + name + ' ';
+                els.mentionsPopup.classList.remove('active');
+                els.msgInput.focus();
+            }
+        });
+
+        // --- Poll System[cite: 1] ---
+        document.getElementById('btn-new-poll').addEventListener('click', () => els.pollModal.classList.add('active'));
+        document.getElementById('btn-cancel-poll').addEventListener('click', () => {
+            els.pollModal.classList.remove('active');
+            document.getElementById('poll-q').value = '';
+        });
+
+        document.getElementById('btn-add-opt').addEventListener('click', () => {
+            const cont = document.getElementById('poll-options-container');
+            if(cont.children.length >= 6) return alert("Maximum 6 options allowed");
+            const input = document.createElement('input');
+            input.type = 'text'; input.className = 'poll-opt-input'; input.placeholder = `Option ${cont.children.length + 1}`; input.maxLength = 50;
+            cont.appendChild(input);
+        });
+
+        document.getElementById('btn-submit-poll').addEventListener('click', () => {
+            const q = document.getElementById('poll-q').value.trim();
+            const optInputs = document.querySelectorAll('.poll-opt-input');
+            let options = [];
+            optInputs.forEach(inp => { if(inp.value.trim()) options.push(inp.value.trim()); });
             
-            // Visual feedback for the viewer clicking it
-            const btn = event.currentTarget;
-            btn.classList.add('bg-white/20');
-            setTimeout(() => btn.classList.remove('bg-white/20'), 150);
+            if(!q || options.length < 2) return alert("Enter a question and at least 2 options.");
+            
+            const now = Date.now();
+            const pollData = {
+                uid: currentUser.id,
+                q: q,
+                options: options,
+                votes: new Array(options.length).fill(0),
+                createdAt: now,
+                expiresAt: now + POLL_LIFESPAN // 10 mins[cite: 1]
+            };
+
+            const newPollRef = push(ref(db, 'polls'));
+            set(newPollRef, pollData);
+            
+            // Inject announcement in chat
+            push(ref(db, 'messages'), {
+                uid: currentUser.id, name: currentUser.name, text: q, time: serverTimestamp(), type: 'poll_announcement', pollId: newPollRef.key
+            });
+
+            els.pollModal.classList.remove('active');
+            document.getElementById('poll-q').value = '';
+            document.getElementById('poll-options-container').innerHTML = `<input type="text" class="poll-opt-input" placeholder="Option 1"><input type="text" class="poll-opt-input" placeholder="Option 2">`;
+        });
+
+        // Format MS to MM:SS
+        function formatTime(ms) {
+            if (ms <= 0) return "Expired";
+            const m = Math.floor(ms / 60000);
+            const s = Math.floor((ms % 60000) / 1000);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // --- Poll UI Lifecycle[cite: 1] ---
+        function updatePollUI() {
+            const now = Date.now();
+            let floatingPollsHTML = '';
+
+            // Sort active polls by newest first for the stack[cite: 1]
+            const sortedPollIds = Object.keys(activePolls).sort((a, b) => activePolls[b].createdAt - activePolls[a].createdAt);
+
+            sortedPollIds.forEach(id => {
+                const poll = activePolls[id];
+                const age = now - poll.createdAt;
+                const remaining = poll.expiresAt - now;
+                const isExpired = remaining <= 0;
+
+                // Chat injection UI update
+                const chatPollEl = document.getElementById(`chat-poll-${id}`);
+                if (chatPollEl) {
+                    if (isExpired) {
+                        chatPollEl.style.opacity = '0.6';
+                        chatPollEl.querySelector('button').textContent = "View Results";
+                    }
+                }
+
+                // Floating Poll Logic (Wait 30s)[cite: 1]
+                if (age >= POLL_FLOAT_DELAY && !isExpired) {
+                    const totalVotes = (poll.votes || []).reduce((a, b) => a + b, 0);
+                    floatingPollsHTML += `
+                        <div class="floating-poll" onclick="openVoteModal('${id}')">
+                            <div class="fp-title">📊 ${sanitize(poll.q)}</div>
+                            <div class="fp-meta">${formatTime(remaining)} • ${totalVotes} votes</div>
+                        </div>
+                    `;
+                }
+            });
+
+            els.pollStack.innerHTML = floatingPollsHTML;
+            
+            // Update live countdown in vote modal if open
+            if(activeVotePollId && activePolls[activeVotePollId]) {
+                const remaining = activePolls[activeVotePollId].expiresAt - Date.now();
+                document.getElementById('vote-time').textContent = remaining > 0 ? formatTime(remaining) : "Poll Ended";
+            }
+        }
+
+        // --- Voting System ---
+        window.openVoteModal = function(pollId) {
+            activeVotePollId = pollId;
+            renderVoteModal(pollId);
+            els.voteModal.classList.add('active');
         };
 
-        // Utility to prevent HTML injection attacks
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        document.getElementById('btn-close-vote').addEventListener('click', () => {
+            els.voteModal.classList.remove('active');
+            activeVotePollId = null;
+        });
+
+        function renderVoteModal(pollId) {
+            const poll = activePolls[pollId];
+            if (!poll) return;
+
+            const now = Date.now();
+            const isExpired = now >= poll.expiresAt;
+            const hasVoted = localStorage.getItem(`voted_${pollId}`) === 'true';
+            const totalVotes = (poll.votes || []).reduce((a, b) => a + b, 0);
+
+            document.getElementById('vote-q').textContent = sanitize(poll.q);
+            const optContainer = document.getElementById('vote-options');
+            
+            if (isExpired) optContainer.parentElement.classList.add('poll-expired');
+            else optContainer.parentElement.classList.remove('poll-expired');
+
+            let html = '';
+            poll.options.forEach((opt, idx) => {
+                const count = poll.votes ? (poll.votes[idx] || 0) : 0;
+                const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+                
+                // If expired or user has voted, show results[cite: 1]. Otherwise, show clickable options.
+                if (isExpired || hasVoted) {
+                    html += `
+                        <div class="poll-option">
+                            <div class="poll-option-bar" style="width: ${pct}%"></div>
+                            <div class="poll-option-content">
+                                <span>${sanitize(opt)}</span>
+                                <span>${pct}% (${count})</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="poll-option" onclick="castVote('${pollId}', ${idx})">
+                            <div class="poll-option-content">
+                                <span>${sanitize(opt)}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            optContainer.innerHTML = html;
+            document.getElementById('vote-total').textContent = `${totalVotes} total votes`;
         }
+
+        window.castVote = function(pollId, optionIndex) {
+            if (localStorage.getItem(`voted_${pollId}`)) return; // Client side double-vote check[cite: 1]
+            
+            localStorage.setItem(`voted_${pollId}`, 'true');
+            runTransaction(ref(db, `polls/${pollId}/votes/${optionIndex}`), (current) => (current || 0) + 1);
+        };
+
+        // --- Utilities ---
+        function sanitize(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function initTheme() {
+            let theme = localStorage.getItem('theme');
+            if(!theme) theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.body.setAttribute('data-theme', theme);
+            els.themeBtn.addEventListener('click', () => {
+                theme = theme === 'light' ? 'dark' : 'light';
+                document.body.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+            });
+        }
+
+        // Start
+        init();
     </script>
 </body>
 </html>
