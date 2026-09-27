@@ -2,286 +2,232 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Live Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Stream - Join the Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes floatEmoji {
-            0% { transform: translateY(0px) scale(1); opacity: 1; }
-            100% { transform: translateY(-150px) scale(1.4); opacity: 0; }
+        /* Hide scrollbar for a clean mobile app feel */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Smooth pop-in animation for new chats */
+        @keyframes popIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .floating-reaction { animation: floatEmoji 1.4s ease-out forwards; }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .chat-message { animation: slideUp 0.25s ease-out forwards; }
-
-        .ig-chat-scroll::-webkit-scrollbar { display: none; }
-        .ig-chat-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .chat-msg { animation: popIn 0.2s ease-out forwards; }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8 select-none font-sans">
+<body class="bg-zinc-950 text-white h-screen flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden font-sans selection:bg-purple-500/30">
 
-    <!-- ================= CONTROL PANEL (Admin / Laptop View) ================= -->
-    <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl space-y-5">
-        <div>
-            <div class="flex items-center justify-between">
-                <span class="text-xs font-bold px-3 py-1 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white rounded-full uppercase tracking-wider">IG Live Studio</span>
-                <span class="text-xs text-emerald-400 font-mono">● Global Cloud Sync</span>
-            </div>
-            <h1 class="text-xl font-black mt-2">Broadcast Controller</h1>
-            <p class="text-zinc-400 text-xs">Launch interactive polls and push live comments.</p>
+    <!-- ================= TOP HEADER ================= -->
+    <div class="bg-zinc-900/80 backdrop-blur-md border-b border-white/10 p-4 sticky top-0 z-20 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="bg-rose-600 animate-pulse w-3 h-3 rounded-full"></div>
+            <h1 class="font-bold text-lg tracking-tight">Live Broadcast</h1>
         </div>
-
-        <!-- Launch Poll Form (20 Min Duration) -->
-        <div class="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-700/50 space-y-3">
-            <h2 class="font-bold text-xs uppercase text-purple-400 tracking-wider">📊 Launch Interactive Poll</h2>
-            <input type="text" id="input-q" placeholder="Ask a question..." class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-500">
-            <div class="grid grid-cols-2 gap-2">
-                <input type="text" id="input-a" placeholder="Option A" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500">
-                <input type="text" id="input-b" placeholder="Option B" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-500">
-            </div>
-            <button onclick="updatePoll()" class="w-full bg-purple-600 hover:bg-purple-500 font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-purple-600/20">Launch Poll 🚀</button>
-        </div>
-
-        <!-- Push Message Form -->
-        <div class="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-700/50 space-y-3">
-            <h2 class="font-bold text-xs uppercase text-amber-400 tracking-wider">💬 Push Live Comment</h2>
-            <input type="text" id="input-name" placeholder="Your Name" value="Viewer" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
-            <textarea id="input-msg" placeholder="Type a comment..." rows="2" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-amber-500 resize-none"></textarea>
-            <button onclick="pushMessage()" class="w-full bg-amber-600 hover:bg-amber-500 font-bold py-2.5 rounded-xl text-sm transition shadow-lg shadow-amber-600/20">Send Comment 💬</button>
-        </div>
+        <span class="bg-white/10 text-xs font-mono px-2.5 py-1 rounded-md text-zinc-300">Live Chat</span>
     </div>
 
+    <!-- ================= ANNOUNCEMENT BANNER ================= -->
+    <div id="public-announcement" class="bg-blue-600/90 text-white p-3 text-sm font-bold shadow-md hidden z-10">
+        📢 <span id="public-announcement-text"></span>
+    </div>
 
-    <!-- ================= INSTAGRAM LIVE STREAM SCREEN (9:16 OBS View) ================= -->
-    <div id="obs-screen" class="w-[400px] h-[711px] bg-zinc-950 border-4 border-zinc-800 rounded-[36px] p-4 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+    <!-- ================= INTERACTIVE POLL UI ================= -->
+    <div id="public-poll" class="hidden bg-gradient-to-br from-purple-900/50 to-indigo-900/50 border-b border-purple-500/30 p-5 shadow-lg z-10 shrink-0">
+        <div class="flex justify-between items-center mb-2">
+            <span class="text-[10px] uppercase font-black tracking-widest text-purple-300 bg-purple-500/30 px-2 py-1 rounded-md">Live Poll</span>
+        </div>
+        <h2 id="poll-q" class="text-base font-bold text-white mb-3">Question goes here?</h2>
         
-        <!-- Floating Reactions Layer -->
-        <div id="floating-reactions" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
-
-        <!-- Top Area: LIVE Badge & Interactive Touch Poll (Replaces Scoreboard) -->
-        <div class="flex flex-col space-y-2 z-20">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-2">
-                    <span class="bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-white shadow-md">LIVE</span>
-                    <div class="flex items-center space-x-1 bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-                        <span class="text-[10px] font-mono font-bold text-zinc-300">1.2K</span>
-                    </div>
+        <div class="space-y-2">
+            <button onclick="vote('A')" id="btn-a" class="w-full text-left relative overflow-hidden bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all active:scale-[0.98]">
+                <div id="bar-a" class="absolute left-0 top-0 bottom-0 bg-purple-600/60 transition-all duration-500 z-0" style="width: 0%"></div>
+                <div class="relative z-10 flex justify-between font-bold text-sm">
+                    <span id="opt-a">Option A</span>
+                    <span id="pct-a" class="font-mono">0%</span>
                 </div>
-                <button onclick="window.close()" class="text-white/60 hover:text-white font-bold text-sm px-2">✕</button>
-            </div>
-
-            <!-- Touch-Interactive Poll Card at the Top -->
-            <div id="poll-card" class="bg-black/70 border border-white/15 p-3.5 rounded-2xl backdrop-blur-xl space-y-2.5 shadow-xl" style="display: none;">
-                <div class="text-center space-y-0.5">
-                    <span class="text-[8px] uppercase font-black tracking-widest text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-full">Live Poll</span>
-                    <h2 id="display-q" class="text-xs font-black text-white pt-1">Question goes here?</h2>
+            </button>
+            <button onclick="vote('B')" id="btn-b" class="w-full text-left relative overflow-hidden bg-white/5 hover:bg-white/10 p-3 rounded-xl border border-white/10 transition-all active:scale-[0.98]">
+                <div id="bar-b" class="absolute left-0 top-0 bottom-0 bg-pink-600/60 transition-all duration-500 z-0" style="width: 0%"></div>
+                <div class="relative z-10 flex justify-between font-bold text-sm">
+                    <span id="opt-b">Option B</span>
+                    <span id="pct-b" class="font-mono">0%</span>
                 </div>
+            </button>
+        </div>
+        <p id="vote-msg" class="text-xs text-center text-purple-300 mt-3 hidden">Thanks for voting!</p>
+    </div>
 
-                <!-- Option A Touch Button -->
-                <div onclick="castVote('A')" class="cursor-pointer space-y-1 bg-zinc-900/80 hover:bg-zinc-800 p-2 rounded-xl border border-white/10 transition active:scale-95">
-                    <div class="flex justify-between font-bold text-[10px]">
-                        <span id="display-a-text" class="text-purple-300">Option A</span>
-                        <span id="display-a-pct" class="text-purple-400 font-mono">50%</span>
-                    </div>
-                    <div class="w-full bg-black h-2 rounded-full overflow-hidden p-0.5 border border-white/10">
-                        <div id="bar-a" class="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: 50%"></div>
-                    </div>
-                </div>
+    <!-- ================= CHAT FEED ================= -->
+    <div id="chat-feed" class="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 pb-2">
+        <!-- Chat messages will inject here -->
+        <div class="text-center text-xs text-zinc-500 my-2">Welcome to the live chat! Be respectful.</div>
+    </div>
 
-                <!-- Option B Touch Button -->
-                <div onclick="castVote('B')" class="cursor-pointer space-y-1 bg-zinc-900/80 hover:bg-zinc-800 p-2 rounded-xl border border-white/10 transition active:scale-95">
-                    <div class="flex justify-between font-bold text-[10px]">
-                        <span id="display-b-text" class="text-pink-300">Option B</span>
-                        <span id="display-b-pct" class="text-pink-400 font-mono">50%</span>
-                    </div>
-                    <div class="w-full bg-black h-2 rounded-full overflow-hidden p-0.5 border border-white/10">
-                        <div id="bar-b" class="bg-gradient-to-r from-pink-600 to-rose-500 h-full rounded-full transition-all duration-500" style="width: 50%"></div>
-                    </div>
-                </div>
+    <!-- ================= CHAT INPUT & REACTIONS ================= -->
+    <div class="bg-zinc-900 border-t border-white/10 p-3 pb-safe shrink-0">
+        <!-- Reaction Bar -->
+        <div class="flex justify-between items-center mb-3 px-2">
+            <span class="text-xs text-zinc-500 font-bold uppercase tracking-wider">React</span>
+            <div class="flex gap-2">
+                <button onclick="sendReaction('❤️')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">❤️</button>
+                <button onclick="sendReaction('🔥')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">🔥</button>
+                <button onclick="sendReaction('👏')" class="bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-full text-xl transition-transform active:scale-90 shadow-sm">👏</button>
             </div>
         </div>
 
-        <!-- Middle & Bottom Area: Scrollable Instagram Chat Feed & Reactions -->
-        <div class="space-y-2 z-20 flex flex-col justify-end mt-2 flex-1 overflow-hidden">
-            
-            <!-- Instagram Live Chat Container (Scrolls Upward automatically, takes more space now) -->
-            <div id="ig-chat-container" class="h-full ig-chat-scroll overflow-y-auto flex flex-col justify-end space-y-2 pr-1">
-                <!-- Dynamically appended chat messages appear here and scroll upwards -->
-            </div>
-
-            <!-- Reaction Buttons & URL Footer -->
-            <div class="flex items-center justify-between pt-2 gap-2 border-t border-white/10">
-                <div class="flex items-center space-x-1.5">
-                    <button onclick="triggerReaction('❤️')" class="bg-black/40 hover:bg-black/60 border border-white/10 p-2 rounded-full text-sm transition active:scale-90">❤️</button>
-                    <button onclick="triggerReaction('🔥')" class="bg-black/40 hover:bg-black/60 border border-white/10 p-2 rounded-full text-sm transition active:scale-90">🔥</button>
-                    <button onclick="triggerReaction('👏')" class="bg-black/40 hover:bg-black/60 border border-white/10 p-2 rounded-full text-sm transition active:scale-90">👏</button>
-                </div>
-                <div class="text-right truncate flex-1">
-                    <a href="https://kunalqbit.github.io/live-stream/" target="_blank" class="text-[9px] font-mono text-zinc-400 hover:text-white underline truncate block">https://kunalqbit.github.io/live-stream/</a>
-                </div>
+        <!-- Text Input -->
+        <div class="flex flex-col gap-2">
+            <input type="text" id="viewer-name" placeholder="Your Name" class="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 transition-colors">
+            <div class="flex gap-2">
+                <input type="text" id="viewer-msg" placeholder="Type a message..." class="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-3 text-sm focus:outline-none focus:border-amber-500 transition-colors" onkeypress="if(event.key === 'Enter') sendChat()">
+                <button onclick="sendChat()" class="bg-amber-600 hover:bg-amber-500 px-5 font-bold rounded-lg text-sm transition-all active:scale-95 shadow-md">Send</button>
             </div>
         </div>
     </div>
 
-
-    <!-- ================= FIREBASE CLOUD ENGINE ================= -->
+    <!-- ================= FIREBASE ENGINE ================= -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, set, update, push, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, onChildAdded, onChildRemoved, runTransaction, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC2e_KYmd_G5S0RR9QJ2C9Ut79Hb1RhmAA",
             authDomain: "yt-live-stream-4e4ea.firebaseapp.com",
             databaseURL: "https://yt-live-stream-4e4ea-default-rtdb.firebaseio.com",
-            projectId: "yt-live-stream-4e4ea",
-            storageBucket: "yt-live-stream-4e4ea.firebasestorage.app",
-            messagingSenderId: "214476471691",
-            appId: "1:214476471691:web:12c9d1440215c90cac838e"
+            projectId: "yt-live-stream-4e4ea"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // --- 1. POLL SYNC (20 Minute Duration & Touch-to-Vote) ---
-        const pollRef = ref(db, 'activePoll');
-        let pollTimer = null;
+        // --- 1. CHAT SYSTEM ---
+        const chatFeed = document.getElementById('chat-feed');
+        const sessionStartTime = Date.now() - (20 * 60 * 1000); // Ignore chats older than 20 mins
 
-        onValue(pollRef, (snapshot) => {
-            const data = snapshot.val();
-            renderPoll(data);
+        window.sendChat = function() {
+            let name = document.getElementById('viewer-name').value.trim();
+            const text = document.getElementById('viewer-msg').value.trim();
+            
+            if(!text) return;
+            if(!name) { name = "Viewer"; document.getElementById('viewer-name').value = name; }
+            
+            // Prevent users from pretending to be the Host
+            if(name.toLowerCase() === 'host') name = "Host (Fake)";
+
+            const newRef = push(ref(db, 'messages'));
+            set(newRef, { id: newRef.key, name, text, time: Date.now() });
+            
+            document.getElementById('viewer-msg').value = '';
+        };
+
+        onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (snapshot) => {
+            const msg = snapshot.val();
+            if (msg.time < sessionStartTime) return;
+
+            const div = document.createElement('div');
+            div.id = `msg-${msg.id}`;
+            div.className = "chat-msg bg-black/40 border border-white/5 p-3 rounded-2xl w-fit max-w-[90%]";
+            
+            const isHost = msg.name.toLowerCase() === 'host';
+            const nameColor = isHost ? 'text-purple-400' : 'text-zinc-300';
+            const badge = isHost ? '<span class="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded-sm ml-2 uppercase">Host</span>' : '';
+
+            div.innerHTML = `
+                <div class="flex items-center mb-0.5">
+                    <span class="${nameColor} font-bold text-xs">${escapeHtml(msg.name)}</span>
+                    ${badge}
+                </div>
+                <p class="text-white text-sm leading-snug break-words">${escapeHtml(msg.text)}</p>
+            `;
+            
+            chatFeed.appendChild(div);
+            requestAnimationFrame(() => chatFeed.scrollTop = chatFeed.scrollHeight);
         });
 
-        window.updatePoll = function() {
-            const q = document.getElementById('input-q').value.trim();
-            const a = document.getElementById('input-a').value.trim();
-            const b = document.getElementById('input-b').value.trim();
+        // Remove chat instantly if Admin deletes it
+        onChildRemoved(ref(db, 'messages'), (snapshot) => {
+            const id = snapshot.key;
+            const el = document.getElementById(`msg-${id}`);
+            if (el) el.remove();
+        });
 
-            if(!q) return;
+        // --- 2. POLL SYSTEM ---
+        let currentPollId = null;
 
-            set(pollRef, {
-                question: q,
-                optA: a || "YES",
-                optB: b || "NO",
-                votesA: 0,
-                votesB: 0,
-                createdAt: Date.now()
-            });
-
-            document.getElementById('input-q').value = '';
-            document.getElementById('input-a').value = '';
-            document.getElementById('input-b').value = '';
-        }
-
-        window.castVote = function(opt) {
-            const field = opt === 'A' ? 'votesA' : 'votesB';
-            runTransaction(ref(db, `activePoll/${field}`), (current) => (current || 0) + 1);
-        }
-
-        function renderPoll(data) {
-            const card = document.getElementById('poll-card');
-            if (!data || !data.createdAt) {
-                card.style.display = 'none';
+        window.vote = function(opt) {
+            if(!currentPollId) return;
+            
+            // Basic check to prevent spam voting from the same browser
+            if(localStorage.getItem(`voted_${currentPollId}`)) {
+                document.getElementById('vote-msg').innerText = "You have already voted!";
+                document.getElementById('vote-msg').classList.remove('hidden');
                 return;
             }
 
-            const twentyMinutes = 20 * 60 * 1000;
-            const elapsed = Date.now() - data.createdAt;
-            const remaining = twentyMinutes - elapsed;
+            runTransaction(ref(db, `activePoll/votes${opt}`), (curr) => (curr || 0) + 1);
+            localStorage.setItem(`voted_${currentPollId}`, 'true');
+            
+            document.getElementById('vote-msg').innerText = "Thanks for voting!";
+            document.getElementById('vote-msg').classList.remove('hidden');
+        };
 
-            if (remaining <= 0) {
-                card.style.display = 'none';
+        onValue(ref(db, 'activePoll'), (snapshot) => {
+            const data = snapshot.val();
+            const pollEl = document.getElementById('public-poll');
+            
+            if (!data || !data.active) {
+                pollEl.classList.add('hidden');
                 return;
             }
 
-            card.style.display = 'block';
-            document.getElementById('display-q').innerText = data.question;
-            document.getElementById('display-a-text').innerText = data.optA;
-            document.getElementById('display-b-text').innerText = data.optB;
+            currentPollId = data.createdAt; // Use timestamp as unique ID
+            pollEl.classList.remove('hidden');
+
+            document.getElementById('poll-q').innerText = data.question;
+            document.getElementById('opt-a').innerText = data.optA;
+            document.getElementById('opt-b').innerText = data.optB;
 
             const total = (data.votesA + data.votesB) || 1;
             const pctA = Math.round((data.votesA / total) * 100);
-            const pctB = 100 - pctA;
+            const pctB = (data.votesA + data.votesB) === 0 ? 0 : 100 - pctA;
 
-            document.getElementById('display-a-pct').innerText = pctA + '%';
+            document.getElementById('pct-a').innerText = pctA + '%';
+            document.getElementById('pct-b').innerText = pctB + '%';
             document.getElementById('bar-a').style.width = pctA + '%';
-            document.getElementById('display-b-pct').innerText = pctB + '%';
             document.getElementById('bar-b').style.width = pctB + '%';
 
-            if (pollTimer) clearTimeout(pollTimer);
-            pollTimer = setTimeout(() => {
-                card.style.display = 'none';
-            }, remaining);
-        }
-
-        // --- 2. CHAT SYNC (Instagram Feed Style - Scrollable Upward) ---
-        window.pushMessage = function() {
-            const name = document.getElementById('input-name').value.trim() || "Viewer";
-            const text = document.getElementById('input-msg').value.trim();
-            if(!text) return;
-
-            push(ref(db, 'messages'), { name, text, time: Date.now() });
-            document.getElementById('input-msg').value = '';
-        }
-
-        const msgRef = ref(db, 'messages');
-        onValue(msgRef, (snapshot) => {
-            const data = snapshot.val();
-            const container = document.getElementById('ig-chat-container');
-            container.innerHTML = '';
-
-            if (data) {
-                const now = Date.now();
-                const twentyMinutes = 20 * 60 * 1000;
-
-                Object.values(data).forEach(msg => {
-                    if (now - msg.time < twentyMinutes) {
-                        const chatBubble = document.createElement('div');
-                        chatBubble.className = "chat-message bg-black/40 backdrop-blur-md border border-white/10 px-3 py-2 rounded-2xl max-w-[95%] shadow-md";
-                        chatBubble.innerHTML = `
-                            <div class="flex items-center space-x-1.5">
-                                <span class="text-amber-400 font-bold text-[11px]">${escapeHtml(msg.name)}</span>
-                            </div>
-                            <p class="text-zinc-100 text-xs font-medium leading-snug break-words">${escapeHtml(msg.text)}</p>
-                        `;
-                        container.appendChild(chatBubble);
-                    }
-                });
-                container.scrollTop = container.scrollHeight;
+            // Hide the vote message if a new poll starts
+            if(!localStorage.getItem(`voted_${currentPollId}`)) {
+                document.getElementById('vote-msg').classList.add('hidden');
             }
         });
 
-        // --- 3. REACTIONS SYNC ---
-        window.triggerReaction = function(emoji) {
+        // --- 3. ANNOUNCEMENT SYSTEM ---
+        onValue(ref(db, 'announcement'), (snapshot) => {
+            const data = snapshot.val();
+            const banner = document.getElementById('public-announcement');
+            if (data && data.active) {
+                document.getElementById('public-announcement-text').innerText = data.text;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        });
+
+        // --- 4. REACTIONS ---
+        window.sendReaction = function(emoji) {
             push(ref(db, 'reactions'), { emoji, time: Date.now() });
-        }
+            
+            // Visual feedback for the viewer clicking it
+            const btn = event.currentTarget;
+            btn.classList.add('bg-white/20');
+            setTimeout(() => btn.classList.remove('bg-white/20'), 150);
+        };
 
-        const reactRef = ref(db, 'reactions');
-        onValue(reactRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const keys = Object.keys(data);
-                const latestReact = data[keys[keys.length - 1]];
-                if (Date.now() - latestReact.time < 3000) {
-                    spawnEmoji(latestReact.emoji);
-                }
-            }
-        });
-
-        function spawnEmoji(emoji) {
-            const container = document.getElementById('floating-reactions');
-            const el = document.createElement('div');
-            el.innerText = emoji;
-            el.className = "absolute text-2xl floating-reaction font-bold select-none right-4";
-            el.style.bottom = '20px';
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 1400);
-        }
-
+        // Utility to prevent HTML injection attacks
         function escapeHtml(text) {
             return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
